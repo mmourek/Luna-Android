@@ -99,7 +99,7 @@ class LunaService : Service() {
         ZipInputStream(BufferedInputStream(zipFile.inputStream())).use { zip ->
             while (true) {
                 val entry = zip.nextEntry ?: break
-                val normalized = entry.name.replace('\\\\', '/')
+                val normalized = entry.name.replace('\\', '/')
                 val relative = normalized.substringAfter('/', "")
                 if (relative.isNotEmpty()) {
                     val out = File(staging, relative)
