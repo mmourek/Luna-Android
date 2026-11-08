@@ -137,16 +137,40 @@ class LunaService : Service() {
             val buffer = ShortArray(4096)
             recorder.startRecording()
             updateNotification("Poslouchám – řekni „Ahoj Luno“")
+            var lastPartial = ""
             while (running && !Thread.currentThread().isInterrupted) {
                 val count = recorder.read(buffer, 0, buffer.size)
-                if (count > 0 && recognizer.acceptWaveForm(buffer, count)) {
-                    val text = JSONObject(recognizer.result).optString("text")
-                    if (isWakePhrase(text)) {
-                        updateNotification("Slyším tě! Luna je připravena na příkaz.")
-                        Thread.sleep(3500)
-                        updateNotification("Poslouchám – řekni „Ahoj Luno“")
-                        recognizer.reset()
+                if (count > 0) {
+                    if (recognizer.acceptWaveForm(buffer, count)) {
+                        val text = JSONObject(recognizer.result).optString("text").trim()
+                        if (text.isNotEmpty()) {
+                            if (isWakePhrase(text)) {
+                                updateNotification("Slyším tě! Luna je připravena na příkaz.")
+                                Thread.sleep(3500)
+                                recognizer.reset()
+                                lastPartial = ""
+                                updateNotification("Poslouchám – řekni „Ahoj Luno“")
+                            } else {
+                                updateNotification("Rozpoznáno: $text")
+                            }
+                        }
+                    } else {
+                        val partial = JSONObject(recognizer.partialResult).optString("partial").trim()
+                        if (partial.isNotEmpty() && partial != lastPartial) {
+                            lastPartial = partial
+                            if (isWakePhrase(partial)) {
+                                updateNotification("Slyším tě! Luna je připravena na příkaz.")
+                                Thread.sleep(3500)
+                                recognizer.reset()
+                                lastPartial = ""
+                                updateNotification("Poslouchám – řekni „Ahoj Luno“")
+                            } else {
+                                updateNotification("Slyším: $partial")
+                            }
+                        }
                     }
+                } else if (count < 0) {
+                    error("Chyba čtení mikrofonu: $count")
                 }
             }
         }
